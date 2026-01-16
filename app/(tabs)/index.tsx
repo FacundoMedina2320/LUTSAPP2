@@ -42,6 +42,7 @@ const CATEGORIES = [
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
+  const versionLabel = "v1.0";
 
   const [sort, setSort] = useState<"downloads" | "rating">("downloads");
   const [category, setCategory] = useState<string>("All");
@@ -245,6 +246,7 @@ export default function Home() {
           setTimeout(() => setSort((s) => (s === "downloads" ? "rating" : "downloads")), 0);
         }}
       />
+      <Text style={styles.versionLabel}>{versionLabel}</Text>
     </View>
   );
 }
@@ -314,4 +316,12 @@ const styles = StyleSheet.create({
   catTextActive: { color: "#fff" },
 
   sectionTitle: { marginTop: 4, fontSize: 14, fontWeight: "800", color: "#111" },
+  versionLabel: {
+    position: "absolute",
+    right: 12,
+    bottom: 8,
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
+  },
 });
