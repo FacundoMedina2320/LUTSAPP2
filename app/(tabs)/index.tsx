@@ -12,7 +12,6 @@ type LutRow = {
   before_url: string | null;
   after_url: string | null;
   downloads_count: number | null;
-  rating_avg: number | null;
 };
 
 type SuggestionRow = {
@@ -44,7 +43,7 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const versionLabel = "v1.0";
 
-  const [sort, setSort] = useState<"downloads" | "rating">("downloads");
+  const [sort, setSort] = useState<"downloads">("downloads");
   const [category, setCategory] = useState<string>("All");
 
   const [query, setQuery] = useState<string>("");
@@ -54,10 +53,8 @@ export default function Home() {
   const [luts, setLuts] = useState<LutRow[]>([]);
 
   const orderBy = useMemo(() => {
-    return sort === "rating"
-      ? { col: "rating_avg" as const, asc: false }
-      : { col: "downloads_count" as const, asc: false };
-  }, [sort]);
+    return { col: "downloads_count" as const, asc: false };
+  }, []);
 
   const onOpenLut = (id: string) => router.push(`/lut/${id}`);
 
@@ -72,7 +69,7 @@ export default function Home() {
         let q = supabase
           .from("luts")
           .select(
-            "id,name,is_premium,before_url,after_url,downloads_count,rating_avg,category:category_id ( name )"
+            "id,name,is_premium,before_url,after_url,downloads_count,category:category_id ( name )"
           )
           .order(orderBy.col, { ascending: orderBy.asc })
           .limit(30);
@@ -189,15 +186,6 @@ export default function Home() {
             Most downloaded
           </Text>
         </Pressable>
-
-        <Pressable
-          style={[styles.sortPill, sort === "rating" && styles.sortPillActive]}
-          onPress={() => setSort("rating")}
-        >
-          <Text style={[styles.sortText, sort === "rating" && styles.sortTextActive]}>
-            Top rated
-          </Text>
-        </Pressable>
       </View>
 
       {/* Categories */}
@@ -217,7 +205,7 @@ export default function Home() {
         )}
       />
 
-      <Text style={styles.sectionTitle}>{sort === "downloads" ? "Most downloaded" : "Top rated"}</Text>
+      <Text style={styles.sectionTitle}>Most downloaded</Text>
     </View>
   );
 
@@ -244,8 +232,7 @@ export default function Home() {
         refreshing={loading}
         onRefresh={() => {
           // refresh simple
-          setSort((s) => (s === "downloads" ? "rating" : "downloads"));
-          setTimeout(() => setSort((s) => (s === "downloads" ? "rating" : "downloads")), 0);
+          setSort("downloads");
         }}
       />
       <Text style={styles.versionLabel}>{versionLabel}</Text>
