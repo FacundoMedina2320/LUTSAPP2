@@ -7,8 +7,8 @@ import LutCard from "../../components/LutCard";
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
   before_url: string | null;
   after_url: string | null;
   downloads_count: number | null;
@@ -18,8 +18,8 @@ type LutRow = {
 type SuggestionRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
 };
 
 const CATEGORIES = [
@@ -71,11 +71,13 @@ export default function Home() {
 
         let q = supabase
           .from("luts")
-          .select("id,name,category,premium,before_url,after_url,downloads_count,rating_avg")
+          .select(
+            "id,name,is_premium,before_url,after_url,downloads_count,rating_avg,category:category_id ( name )"
+          )
           .order(orderBy.col, { ascending: orderBy.asc })
           .limit(30);
 
-        if (category !== "All") q = q.eq("category", category);
+        if (category !== "All") q = q.eq("category.name", category);
 
         const { data, error } = await q;
 
@@ -110,12 +112,12 @@ export default function Home() {
       try {
         let q = supabase
           .from("luts")
-          .select("id,name,category,premium")
+          .select("id,name,is_premium,category:category_id ( name )")
           .ilike("name", `%${text}%`)
           .order("downloads_count", { ascending: false })
           .limit(6);
 
-        if (category !== "All") q = q.eq("category", category);
+        if (category !== "All") q = q.eq("category.name", category);
 
         const { data, error } = await q;
         if (error) throw error;
@@ -168,8 +170,8 @@ export default function Home() {
                   {s.name}
                 </Text>
                 <Text style={styles.sugMeta}>
-                  {s.category}
-                  {s.premium ? " • Premium" : ""}
+                  {s.category?.name ?? "Uncategorized"}
+                  {s.is_premium ? " • Premium" : ""}
                 </Text>
               </Pressable>
             ))}
@@ -231,10 +233,10 @@ export default function Home() {
             lut={{
               id: item.id,
               name: item.name,
-              premium: item.premium,
+              premium: item.is_premium,
               beforeUri: item.before_url,
               afterUri: item.after_url,
-              category: item.category,
+              category: item.category?.name,
             }}
             onPress={() => onOpenLut(item.id)}
           />
