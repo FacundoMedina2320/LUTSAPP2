@@ -11,9 +11,6 @@ type RevenueCatEvent = {
   transaction_id?: string | null;
   original_transaction_id?: string | null;
   purchase_token?: string | null;
-  entitlement_ids?: string[] | null;
-  active_subscriptions?: string[] | null;
-  all_purchase_ids?: string[] | null;
 };
 
 type RevenueCatSubscriber = {
@@ -25,18 +22,6 @@ type RevenueCatSubscriber = {
 type RevenueCatPayload = {
   event?: RevenueCatEvent;
   subscriber?: RevenueCatSubscriber;
-  type?: string;
-  app_user_id?: string;
-  product_id?: string;
-  store?: string;
-  expiration_at_ms?: number | string | null;
-  purchased_at_ms?: number | string | null;
-  transaction_id?: string | null;
-  original_transaction_id?: string | null;
-  purchase_token?: string | null;
-  entitlement_ids?: string[] | null;
-  active_subscriptions?: string[] | null;
-  all_purchase_ids?: string[] | null;
 };
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -86,7 +71,11 @@ serve(async (req) => {
     }
 
     const payload = (await req.json()) as RevenueCatPayload;
-    const event = payload.event ?? payload;
+    const event = payload.event;
+
+    if (!event) {
+      return jsonResponse({ error: "Missing event" }, 400);
+    }
 
     const eventType = event.type ?? "";
     const appUserId = event.app_user_id?.trim();
@@ -128,8 +117,8 @@ serve(async (req) => {
     }
 
     const transactionId = event.transaction_id ?? event.original_transaction_id;
-    const purchasedMs = parseMillis(event.purchased_at_ms ?? payload.purchased_at_ms);
-    const expirationMs = parseMillis(event.expiration_at_ms ?? payload.expiration_at_ms);
+    const purchasedMs = parseMillis(event.purchased_at_ms);
+    const expirationMs = parseMillis(event.expiration_at_ms);
     const purchaseAt = purchasedMs ? new Date(purchasedMs) : new Date();
     const expiresAt = expirationMs ? new Date(expirationMs) : null;
 
@@ -163,9 +152,9 @@ serve(async (req) => {
       {
         user_id: appUserId,
         rc_app_user_id: appUserId,
-        entitlements: subscriberSnapshot?.entitlements ?? event.entitlement_ids ?? null,
-        active_subscriptions: subscriberSnapshot?.subscriptions ?? event.active_subscriptions ?? null,
-        all_purchase_ids: subscriberSnapshot?.non_subscriptions ?? event.all_purchase_ids ?? null,
+        entitlements: subscriberSnapshot?.entitlements ?? null,
+        active_subscriptions: subscriberSnapshot?.subscriptions ?? null,
+        all_purchase_ids: subscriberSnapshot?.non_subscriptions ?? null,
         last_sync_at: new Date().toISOString(),
       },
       { onConflict: "user_id" }
@@ -230,6 +219,7 @@ serve(async (req) => {
       if (!product.lut_id) {
         return jsonResponse({ error: "Product missing lut_id" }, 400);
       }
+
       const { error: entitlementError } = await supabase.from("entitlements").upsert(
         {
           user_id: appUserId,
