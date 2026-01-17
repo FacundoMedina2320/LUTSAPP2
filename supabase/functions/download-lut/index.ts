@@ -62,11 +62,12 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const { data: subscription, error: subscriptionError } = await supabase
-        .from("subscriptions")
-        .select("id,status,current_period_end")
+      const { data: subscriptionEntitlement, error: subscriptionError } = await supabase
+        .from("entitlements")
+        .select("id,expires_at")
         .eq("user_id", userData.user.id)
-        .eq("status", "active")
+        .eq("source", "subscription")
+        .is("lut_id", null)
         .limit(1)
         .maybeSingle();
 
@@ -80,7 +81,9 @@ serve(async (req) => {
       const hasEntitlement =
         entitlement && (!entitlement.expires_at || new Date(entitlement.expires_at) > new Date());
       const hasSubscription =
-        subscription && new Date(subscription.current_period_end) > new Date();
+        subscriptionEntitlement &&
+        (!subscriptionEntitlement.expires_at ||
+          new Date(subscriptionEntitlement.expires_at) > new Date());
 
       if (!hasEntitlement && !hasSubscription) {
         return jsonResponse({ error: "Forbidden" }, 403);

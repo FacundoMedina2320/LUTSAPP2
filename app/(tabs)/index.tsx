@@ -7,19 +7,18 @@ import LutCard from "../../components/LutCard";
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
   before_url: string | null;
   after_url: string | null;
   downloads_count: number | null;
-  rating_avg: number | null;
 };
 
 type SuggestionRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
 };
 
 const CATEGORIES = [
@@ -42,8 +41,9 @@ const CATEGORIES = [
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
+  const versionLabel = "v1.0";
 
-  const [sort, setSort] = useState<"downloads" | "rating">("downloads");
+  const [sort, setSort] = useState<"downloads">("downloads");
   const [category, setCategory] = useState<string>("All");
 
   const [query, setQuery] = useState<string>("");
@@ -53,10 +53,8 @@ export default function Home() {
   const [luts, setLuts] = useState<LutRow[]>([]);
 
   const orderBy = useMemo(() => {
-    return sort === "rating"
-      ? { col: "rating_avg" as const, asc: false }
-      : { col: "downloads_count" as const, asc: false };
-  }, [sort]);
+    return { col: "downloads_count" as const, asc: false };
+  }, []);
 
   const onOpenLut = (id: string) => router.push(`/lut/${id}`);
 
@@ -70,11 +68,13 @@ export default function Home() {
 
         let q = supabase
           .from("luts")
-          .select("id,name,category,premium,before_url,after_url,downloads_count,rating_avg")
+          .select(
+            "id,name,is_premium,before_url,after_url,downloads_count,category:category_id ( name )"
+          )
           .order(orderBy.col, { ascending: orderBy.asc })
           .limit(30);
 
-        if (category !== "All") q = q.eq("category", category);
+        if (category !== "All") q = q.eq("category.name", category);
 
         const { data, error } = await q;
 
@@ -109,12 +109,12 @@ export default function Home() {
       try {
         let q = supabase
           .from("luts")
-          .select("id,name,category,premium")
+          .select("id,name,is_premium,category:category_id ( name )")
           .ilike("name", `%${text}%`)
           .order("downloads_count", { ascending: false })
           .limit(6);
 
-        if (category !== "All") q = q.eq("category", category);
+        if (category !== "All") q = q.eq("category.name", category);
 
         const { data, error } = await q;
         if (error) throw error;
@@ -167,8 +167,8 @@ export default function Home() {
                   {s.name}
                 </Text>
                 <Text style={styles.sugMeta}>
-                  {s.category}
-                  {s.premium ? " • Premium" : ""}
+                  {s.category?.name ?? "Uncategorized"}
+                  {s.is_premium ? " • Premium" : ""}
                 </Text>
               </Pressable>
             ))}
@@ -184,15 +184,6 @@ export default function Home() {
         >
           <Text style={[styles.sortText, sort === "downloads" && styles.sortTextActive]}>
             Most downloaded
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={[styles.sortPill, sort === "rating" && styles.sortPillActive]}
-          onPress={() => setSort("rating")}
-        >
-          <Text style={[styles.sortText, sort === "rating" && styles.sortTextActive]}>
-            Top rated
           </Text>
         </Pressable>
       </View>
@@ -214,7 +205,7 @@ export default function Home() {
         )}
       />
 
-      <Text style={styles.sectionTitle}>{sort === "downloads" ? "Most downloaded" : "Top rated"}</Text>
+      <Text style={styles.sectionTitle}>Most downloaded</Text>
     </View>
   );
 
@@ -230,10 +221,10 @@ export default function Home() {
             lut={{
               id: item.id,
               name: item.name,
-              premium: item.premium,
+              premium: item.is_premium,
               beforeUri: item.before_url,
               afterUri: item.after_url,
-              category: item.category,
+              category: item.category?.name,
             }}
             onPress={() => onOpenLut(item.id)}
           />
@@ -241,10 +232,10 @@ export default function Home() {
         refreshing={loading}
         onRefresh={() => {
           // refresh simple
-          setSort((s) => (s === "downloads" ? "rating" : "downloads"));
-          setTimeout(() => setSort((s) => (s === "downloads" ? "rating" : "downloads")), 0);
+          setSort("downloads");
         }}
       />
+      <Text style={styles.versionLabel}>{versionLabel}</Text>
     </View>
   );
 }
@@ -314,4 +305,12 @@ const styles = StyleSheet.create({
   catTextActive: { color: "#fff" },
 
   sectionTitle: { marginTop: 4, fontSize: 14, fontWeight: "800", color: "#111" },
+  versionLabel: {
+    position: "absolute",
+    right: 12,
+    bottom: 8,
+    fontSize: 10,
+    color: "#999",
+    fontWeight: "600",
+  },
 });
