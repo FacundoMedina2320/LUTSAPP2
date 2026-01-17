@@ -2,7 +2,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -86,6 +88,15 @@ export default function LutDetail() {
       const signedUrl = data?.url as string | undefined;
       if (!signedUrl) {
         throw new Error("Signed URL missing");
+      }
+
+      if (Platform.OS === "web") {
+        const canOpen = await Linking.canOpenURL(signedUrl);
+        if (!canOpen) {
+          throw new Error("Unable to open download URL");
+        }
+        await Linking.openURL(signedUrl);
+        return;
       }
 
       const safeName = lut.name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
