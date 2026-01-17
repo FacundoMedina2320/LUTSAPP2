@@ -7,8 +7,8 @@ import LutCard from "../../components/LutCard";
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
   before_url: string | null;
   after_url: string | null;
   downloads_count: number | null;
@@ -40,7 +40,7 @@ export default function Library() {
       const { data, error } = await supabase
         .from("user_library")
         .select(
-          "created_at, luts:lut_id ( id, name, category, premium, before_url, after_url, downloads_count, rating_avg )"
+          "created_at, luts:lut_id ( id, name, is_premium, before_url, after_url, downloads_count, rating_avg, category:category_id ( name ) )"
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
@@ -79,10 +79,10 @@ export default function Library() {
             lut={{
               id: item.id,
               name: item.name,
-              premium: item.premium,
+              premium: item.is_premium,
               beforeUri: item.before_url,
               afterUri: item.after_url,
-              category: item.category,
+              category: item.category?.name,
             }}
             onPress={() => router.push(`/lut/${item.id}`)}
           />
