@@ -7,17 +7,16 @@ import LutCard from "../../components/LutCard";
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
   before_url: string | null;
   after_url: string | null;
   downloads_count: number | null;
-  rating_avg: number | null;
 };
 
 type LibraryRow = {
   created_at: string;
-  luts: LutRow | null; // viene del join alias luts:lut_id(...)
+  lut_id: string;
 };
 
 export default function Library() {
@@ -37,22 +36,36 @@ export default function Library() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data: libraryRows, error } = await supabase
         .from("user_library")
-        .select(
-          "created_at, luts:lut_id ( id, name, category, premium, before_url, after_url, downloads_count, rating_avg )"
-        )
+        .select("created_at,lut_id")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const rows = ((data as unknown) as LibraryRow[]) || [];
+      const rows = (libraryRows as LibraryRow[]) || [];
+      const lutIds = rows.map((row) => row.lut_id);
 
-      // mapeo limpio: de [{created_at, luts:{...}}] => [{...lut}]
-      const mapped: LutRow[] = rows
-        .map((r) => r.luts)
-        .filter((x): x is LutRow => !!x);
+      if (lutIds.length === 0) {
+        setItems([]);
+        return;
+      }
+
+      const { data: lutRows, error: lutError } = await supabase
+        .from("luts")
+        .select(
+          "id,name,is_premium,before_url,after_url,downloads_count,category:category_id ( name )"
+        )
+        .in("id", lutIds);
+
+      if (lutError) throw lutError;
+
+      const lutMap = new Map((lutRows as LutRow[]).map((lut) => [lut.id, lut]));
+
+      const mapped = rows
+        .map((row) => lutMap.get(row.lut_id))
+        .filter((lut): lut is LutRow => !!lut);
 
       setItems(mapped);
     } catch (e: any) {
@@ -79,10 +92,10 @@ export default function Library() {
             lut={{
               id: item.id,
               name: item.name,
-              premium: item.premium,
+              premium: item.is_premium,
               beforeUri: item.before_url,
               afterUri: item.after_url,
-              category: item.category,
+              category: item.category?.name,
             }}
             onPress={() => router.push(`/lut/${item.id}`)}
           />

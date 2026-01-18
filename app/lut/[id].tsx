@@ -2,7 +2,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Linking,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -18,11 +20,11 @@ import { supabase } from "../../lib/supabase";
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
+  category: { name: string } | null;
+  is_premium: boolean;
   before_url: string | null;
   after_url: string | null;
-  cube_url: string | null;
+  cube_path: string | null;
   downloads_count: number | null;
 };
 
@@ -49,7 +51,7 @@ export default function LutDetail() {
         const { data, error } = await supabase
           .from("luts")
           .select(
-            "id,name,category,premium,before_url,after_url,cube_url,downloads_count"
+            "id,name,is_premium,before_url,after_url,cube_path,downloads_count,category:category_id ( name )"
           )
           .eq("id", lutId)
           .single();
@@ -86,6 +88,15 @@ export default function LutDetail() {
       const signedUrl = data?.url as string | undefined;
       if (!signedUrl) {
         throw new Error("Signed URL missing");
+      }
+
+      if (Platform.OS === "web") {
+        const canOpen = await Linking.canOpenURL(signedUrl);
+        if (!canOpen) {
+          throw new Error("Unable to open download URL");
+        }
+        await Linking.openURL(signedUrl);
+        return;
       }
 
       const safeName = lut.name.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
