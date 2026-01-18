@@ -38,9 +38,16 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");
 
+    if (!token) {
+      return jsonResponse({ error: "Unauthorized", detail: "Missing bearer token" }, 401);
+    }
+
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData?.user) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+      return jsonResponse(
+        { error: "Unauthorized", detail: userError?.message ?? "Invalid user session" },
+        401
+      );
     }
 
     const { data: lut, error: lutError } = await supabase
@@ -50,7 +57,14 @@ serve(async (req) => {
       .single();
 
     if (lutError || !lut) {
-      return jsonResponse({ error: "LUT not found" }, 404);
+      return jsonResponse(
+        { error: "LUT not found", detail: lutError?.message ?? "Missing LUT" },
+        404
+      );
+    }
+
+    if (!lut.cube_path) {
+      return jsonResponse({ error: "LUT missing cube_path" }, 500);
     }
 
     if (lut.is_premium) {
@@ -71,11 +85,18 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      if (
-        (entitlementError && entitlementError.code !== "PGRST116") ||
-        (subscriptionError && subscriptionError.code !== "PGRST116")
-      ) {
-        return jsonResponse({ error: "Entitlement check failed" }, 500);
+      if (entitlementError && entitlementError.code !== "PGRST116") {
+        return jsonResponse(
+          { error: "Entitlement check failed", detail: entitlementError.message },
+          500
+        );
+      }
+
+      if (subscriptionError && subscriptionError.code !== "PGRST116") {
+        return jsonResponse(
+          { error: "Subscription entitlement check failed", detail: subscriptionError.message },
+          500
+        );
       }
 
       const hasEntitlement =
@@ -90,18 +111,28 @@ serve(async (req) => {
       }
     }
 
-    await supabase.from("downloads").insert({
+    const { error: downloadError } = await supabase.from("downloads").insert({
       user_id: userData.user.id,
       lut_id: lut.id,
       source: "app",
     });
+
+    if (downloadError) {
+      return jsonResponse(
+        { error: "Download log failed", detail: downloadError.message },
+        500
+      );
+    }
 
     const { data: signed, error: signedError } = await supabase.storage
       .from("luts")
       .createSignedUrl(lut.cube_path, 60);
 
     if (signedError || !signed?.signedUrl) {
-      return jsonResponse({ error: "Signed URL failed" }, 500);
+      return jsonResponse(
+        { error: "Signed URL failed", detail: signedError?.message ?? "Missing signed URL" },
+        500
+      );
     }
 
     return jsonResponse({ url: signed.signedUrl }, 200);
