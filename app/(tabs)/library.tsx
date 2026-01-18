@@ -30,6 +30,7 @@ export default function Library() {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
+      console.log("JWT:", sessionData?.session?.access_token);
 
       if (!userId) {
         Alert.alert("Login required", "Please log in to see your library.");
