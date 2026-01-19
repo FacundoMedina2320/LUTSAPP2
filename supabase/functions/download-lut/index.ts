@@ -24,15 +24,30 @@ serve(async (req) => {
       return jsonResponse({ error: "lut_id required" }, 400);
     }
 
+    console.log(
+      "AUTH header present?",
+      req.headers.has("authorization") || req.headers.has("Authorization")
+    );
+    console.log(
+      "AUTH header value prefix:",
+      (req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "").slice(0, 30)
+    );
+    console.log("ENV has SUPABASE_URL?", !!Deno.env.get("SUPABASE_URL"));
+    console.log("ENV has SUPABASE_ANON_KEY?", !!Deno.env.get("SUPABASE_ANON_KEY"));
+    console.log(
+      "ENV has SUPABASE_SERVICE_ROLE_KEY?",
+      !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+    );
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       return jsonResponse({ error: "Server not configured" }, 500);
     }
 
-    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: { persistSession: false },
     });
 
@@ -48,6 +63,7 @@ serve(async (req) => {
     }
 
     const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    console.log("getUser error:", userError?.message ?? null);
     if (userError || !userData?.user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
