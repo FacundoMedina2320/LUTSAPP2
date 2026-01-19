@@ -85,17 +85,31 @@ export default function LutDetail() {
 
       setBusy(true);
 
+      const { data: sessionRes, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr) throw sessionErr;
+
+      const accessToken = sessionRes.session?.access_token;
+      if (!accessToken) {
+        Alert.alert("Login required", "Please log in to download this LUT.");
+        return;
+      }
+
       const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
+      if (!anonKey) {
+        Alert.alert("Config error", "Missing EXPO_PUBLIC_SUPABASE_ANON_KEY");
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("download-lut", {
         body: { lut_id: lut.id },
         headers: {
           Authorization: `Bearer ${accessToken}`,
-          apikey: anonKey!,
+          apikey: anonKey,
         },
       });
+
+      console.log("download-lut data:", data);
+      console.log("download-lut error:", JSON.stringify(error, null, 2));
 
       if (error) {
         throw error;
