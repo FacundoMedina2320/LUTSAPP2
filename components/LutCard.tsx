@@ -18,10 +18,15 @@ export default function LutCard({ lut, onPress }: Props) {
   if (!lut) return null; // ✅ evita el error afterUri
 
   const img = lut.afterUri || lut.beforeUri || "";
+  const hasImage = Boolean(img);
 
   return (
     <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: img }} style={styles.image} />
+      {hasImage ? (
+        <Image source={{ uri: img }} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder} />
+      )}
 
       <View style={styles.info}>
         <View style={styles.row}>
@@ -40,6 +45,11 @@ export default function LutCard({ lut, onPress }: Props) {
 const styles = StyleSheet.create({
   card: { marginBottom: 24, borderRadius: 24, overflow: "hidden", backgroundColor: "#f5f5f5" },
   image: { width: "100%", height: 280, backgroundColor: "#eee" },
+  imagePlaceholder: {
+    width: "100%",
+    height: 280,
+    backgroundColor: "#eee",
+  },
   info: { padding: 12 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   name: { fontSize: 16, fontWeight: "600", color: "#111", flex: 1, marginRight: 6 },

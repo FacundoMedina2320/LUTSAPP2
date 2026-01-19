@@ -83,13 +83,13 @@ curl -X POST \
 
 ## 5) What the sync does
 
-- Validates `cube/<slug>.cube` exists.
-- Optionally sets `before_url` and `after_url` using `images/<slug>-before.jpg` and `images/<slug>-after.jpg`.
+- Validates `cube/<slug>.cube` exists in the `lut-files` bucket.
+- Optionally sets `preview_before_path` and `preview_after_path` using `images/<slug>-before.jpg` and `images/<slug>-after.jpg` from `lut-previews`.
 - Upserts categories by slug (creates if missing).
 - Upserts LUTs by `slug` with normalized metadata.
 
 ## 6) Notes
 
 - `category` uses the normalized `categories` table and writes `category_id` into `luts`.
-- If image files are missing, `before_url`/`after_url` will be null.
+- If image files are missing, `preview_before_path`/`preview_after_path` will be null.
 - The sync does not store `tags` unless you add a column to `luts` for them.

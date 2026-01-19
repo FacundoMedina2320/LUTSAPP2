@@ -53,8 +53,10 @@ serve(async (req) => {
     const description = getString(form, "description");
     const categoryId = getString(form, "category_id");
     const currency = getString(form, "currency") || "USD";
-    const beforeUrl = getString(form, "before_url") || null;
-    const afterUrl = getString(form, "after_url") || null;
+    const previewBeforePath =
+      getString(form, "preview_before_path") || getString(form, "before_url") || null;
+    const previewAfterPath =
+      getString(form, "preview_after_path") || getString(form, "after_url") || null;
     const isPremium = getString(form, "is_premium") === "true";
     const priceCents = Number(getString(form, "price_cents") || "0");
     const cubeFile = form.get("cube_file");
@@ -76,9 +78,9 @@ serve(async (req) => {
       return jsonResponse({ error: "Only .cube files allowed" }, 400);
     }
 
-    const storagePath = `luts/${crypto.randomUUID()}.cube`;
+    const storagePath = `cube/${crypto.randomUUID()}.cube`;
     const { error: uploadError } = await supabase.storage
-      .from("luts")
+      .from("lut-files")
       .upload(storagePath, cubeFile, {
         contentType: "application/octet-stream",
         upsert: false,
@@ -98,15 +100,15 @@ serve(async (req) => {
         is_premium: isPremium,
         price_cents: priceCents,
         currency,
-        before_url: beforeUrl,
-        after_url: afterUrl,
+        preview_before_path: previewBeforePath,
+        preview_after_path: previewAfterPath,
         cube_path: storagePath,
       })
       .select("id, name, slug, is_premium, price_cents, currency, cube_path")
       .single();
 
     if (lutError) {
-      await supabase.storage.from("luts").remove([storagePath]);
+      await supabase.storage.from("lut-files").remove([storagePath]);
       return jsonResponse({ error: "Insert failed", details: lutError.message }, 500);
     }
 

@@ -24,26 +24,51 @@ serve(async (req) => {
       return jsonResponse({ error: "lut_id required" }, 400);
     }
 
+    console.log(
+      "AUTH header present?",
+      req.headers.has("authorization") || req.headers.has("Authorization")
+    );
+    console.log(
+      "AUTH header value prefix:",
+      (req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "").slice(0, 30)
+    );
+    console.log("ENV has SUPABASE_URL?", !!Deno.env.get("SUPABASE_URL"));
+    console.log("ENV has SUPABASE_ANON_KEY?", !!Deno.env.get("SUPABASE_ANON_KEY"));
+    console.log(
+      "ENV has SUPABASE_SERVICE_ROLE_KEY?",
+      !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+    );
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
       return jsonResponse({ error: "Server not configured" }, 500);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+    const supabaseAuth = createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: { persistSession: false },
     });
 
-    const authHeader = req.headers.get("Authorization") ?? "";
-    const token = authHeader.replace("Bearer ", "");
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+
+    if (!token) {
+      return jsonResponse({ error: "Missing Authorization Bearer token" }, 401);
+    }
+
+    const { data: userData, error: userError } = await supabaseAuth.auth.getUser(token);
+    console.log("getUser error:", userError?.message ?? null);
     if (userError || !userData?.user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const { data: lut, error: lutError } = await supabase
+    const { data: lut, error: lutError } = await supabaseAdmin
       .from("luts")
       .select("id,is_premium,cube_path")
       .eq("id", body.lut_id)
@@ -54,7 +79,7 @@ serve(async (req) => {
     }
 
     if (lut.is_premium) {
-      const { data: entitlement, error: entitlementError } = await supabase
+      const { data: entitlement, error: entitlementError } = await supabaseAdmin
         .from("entitlements")
         .select("id,expires_at")
         .eq("user_id", userData.user.id)
@@ -62,7 +87,7 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      const { data: subscriptionEntitlement, error: subscriptionError } = await supabase
+      const { data: subscriptionEntitlement, error: subscriptionError } = await supabaseAdmin
         .from("entitlements")
         .select("id,expires_at")
         .eq("user_id", userData.user.id)
@@ -90,14 +115,14 @@ serve(async (req) => {
       }
     }
 
-    await supabase.from("downloads").insert({
+    await supabaseAdmin.from("downloads").insert({
       user_id: userData.user.id,
       lut_id: lut.id,
       source: "app",
     });
 
-    const { data: signed, error: signedError } = await supabase.storage
-      .from("luts")
+    const { data: signed, error: signedError } = await supabaseAdmin.storage
+      .from("lut-files")
       .createSignedUrl(lut.cube_path, 60);
 
     if (signedError || !signed?.signedUrl) {

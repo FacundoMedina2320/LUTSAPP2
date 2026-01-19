@@ -74,7 +74,7 @@ serve(async (req) => {
       const afterPath = `images/${slug}-after.jpg`;
 
       const { data: cubeObjects, error: cubeError } = await supabase.storage
-        .from("luts")
+        .from("lut-files")
         .list("cube", { search: `${slug}.cube` });
 
       if (cubeError || !cubeObjects?.some((obj) => obj.name === `${slug}.cube`)) {
@@ -83,22 +83,18 @@ serve(async (req) => {
       }
 
       const { data: beforeObjects } = await supabase.storage
-        .from("luts")
+        .from("lut-previews")
         .list("images", { search: `${slug}-before.jpg` });
 
       const { data: afterObjects } = await supabase.storage
-        .from("luts")
+        .from("lut-previews")
         .list("images", { search: `${slug}-after.jpg` });
 
       const hasBefore = beforeObjects?.some((obj) => obj.name === `${slug}-before.jpg`) ?? false;
       const hasAfter = afterObjects?.some((obj) => obj.name === `${slug}-after.jpg`) ?? false;
 
-      const beforeUrl = hasBefore
-        ? supabase.storage.from("luts").getPublicUrl(beforePath).data.publicUrl
-        : null;
-      const afterUrl = hasAfter
-        ? supabase.storage.from("luts").getPublicUrl(afterPath).data.publicUrl
-        : null;
+      const previewBeforePath = hasBefore ? beforePath : null;
+      const previewAfterPath = hasAfter ? afterPath : null;
 
       let categoryId: string | null = null;
       if (item.category) {
@@ -143,8 +139,8 @@ serve(async (req) => {
         price_cents: item.price_cents ?? 0,
         currency: item.currency ?? "USD",
         cube_path: cubePath,
-        before_url: beforeUrl,
-        after_url: afterUrl,
+        preview_before_path: previewBeforePath,
+        preview_after_path: previewAfterPath,
       });
     }
 

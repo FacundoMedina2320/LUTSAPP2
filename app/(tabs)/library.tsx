@@ -2,17 +2,20 @@ import { useEffect, useState } from "react";
 import { Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
+import { getPreviewUrls } from "../../lib/lutPreviews";
 import LutCard from "../../components/LutCard";
 
 type LutRow = {
   id: string;
   name: string;
-  category: string;
-  premium: boolean;
-  before_url: string | null;
-  after_url: string | null;
+  category: { name: string } | null;
+  is_premium: boolean;
+  preview_before_path: string | null;
+  preview_after_path: string | null;
   downloads_count: number | null;
   rating_avg: number | null;
+  beforeUrl?: string | null;
+  afterUrl?: string | null;
 };
 
 type LibraryRow = {
@@ -30,6 +33,7 @@ export default function Library() {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
+      console.log("JWT:", sessionData?.session?.access_token);
 
       if (!userId) {
         Alert.alert("Login required", "Please log in to see your library.");
@@ -40,7 +44,7 @@ export default function Library() {
       const { data, error } = await supabase
         .from("user_library")
         .select(
-          "created_at, luts:lut_id ( id, name, category, premium, before_url, after_url, downloads_count, rating_avg )"
+          "created_at, luts:lut_id ( id, name, is_premium, preview_before_path, preview_after_path, downloads_count, rating_avg, category:category_id ( name ) )"
         )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
@@ -50,9 +54,18 @@ export default function Library() {
       const rows = ((data as unknown) as LibraryRow[]) || [];
 
       // mapeo limpio: de [{created_at, luts:{...}}] => [{...lut}]
-      const mapped: LutRow[] = rows
-        .map((r) => r.luts)
-        .filter((x): x is LutRow => !!x);
+      const mapped: LutRow[] = await Promise.all(
+        rows
+          .map((r) => r.luts)
+          .filter((x): x is LutRow => !!x)
+          .map(async (item) => {
+            const preview = await getPreviewUrls(
+              item.preview_before_path,
+              item.preview_after_path
+            );
+            return { ...item, ...preview };
+          })
+      );
 
       setItems(mapped);
     } catch (e: any) {
@@ -79,10 +92,10 @@ export default function Library() {
             lut={{
               id: item.id,
               name: item.name,
-              premium: item.premium,
-              beforeUri: item.before_url,
-              afterUri: item.after_url,
-              category: item.category,
+              premium: item.is_premium,
+              beforeUri: item.beforeUrl ?? null,
+              afterUri: item.afterUrl ?? null,
+              category: item.category?.name,
             }}
             onPress={() => router.push(`/lut/${item.id}`)}
           />
