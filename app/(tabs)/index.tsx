@@ -44,7 +44,7 @@ const CATEGORIES = [
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
-  const versionLabel = "v2.0";
+  const versionLabel = "2.2";
 
   const [sort, setSort] = useState<"downloads">("downloads");
   const [category, setCategory] = useState<string>("All");
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     right: 12,
     bottom: 8,
     fontSize: 10,
-    color: "#999",
+    color: "#d32f2f",
     fontWeight: "600",
   },
 });
