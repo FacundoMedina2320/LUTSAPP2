@@ -125,7 +125,7 @@ serve(async (req) => {
     }
 
     const { data: signed, error: signedError } = await supabase.storage
-      .from("luts")
+      .from("lut-files")
       .createSignedUrl(lut.cube_path, 60);
 
     if (signedError || !signed?.signedUrl) {

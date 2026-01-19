@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
+import { getPreviewUrl } from "../../lib/storage";
 import LutCard from "../../components/LutCard";
 
 type LutRow = {
@@ -9,8 +10,8 @@ type LutRow = {
   name: string;
   category: { name: string } | null;
   is_premium: boolean;
-  before_url: string | null;
-  after_url: string | null;
+  preview_before_path: string | null;
+  preview_after_path: string | null;
   downloads_count: number | null;
 };
 
@@ -69,7 +70,7 @@ export default function Home() {
         let q = supabase
           .from("luts")
           .select(
-            "id,name,is_premium,before_url,after_url,downloads_count,category:category_id ( name )"
+            "id,name,is_premium,preview_before_path,preview_after_path,downloads_count,category:category_id ( name )"
           )
           .order(orderBy.col, { ascending: orderBy.asc })
           .limit(30);
@@ -222,8 +223,8 @@ export default function Home() {
               id: item.id,
               name: item.name,
               premium: item.is_premium,
-              beforeUri: item.before_url,
-              afterUri: item.after_url,
+              beforeUri: getPreviewUrl(item.preview_before_path),
+              afterUri: getPreviewUrl(item.preview_after_path),
               category: item.category?.name,
             }}
             onPress={() => onOpenLut(item.id)}

@@ -16,14 +16,15 @@ import * as Sharing from "expo-sharing";
 
 import BeforeAfterSlider from "../../components/BeforeAfterSlider";
 import { supabase } from "../../lib/supabase";
+import { getPreviewUrl } from "../../lib/storage";
 
 type LutRow = {
   id: string;
   name: string;
   category: { name: string } | null;
   is_premium: boolean;
-  before_url: string | null;
-  after_url: string | null;
+  preview_before_path: string | null;
+  preview_after_path: string | null;
   cube_path: string | null;
   downloads_count: number | null;
 };
@@ -51,7 +52,7 @@ export default function LutDetail() {
         const { data, error } = await supabase
           .from("luts")
           .select(
-            "id,name,is_premium,before_url,after_url,cube_path,downloads_count,category:category_id ( name )"
+            "id,name,is_premium,preview_before_path,preview_after_path,cube_path,downloads_count,category:category_id ( name )"
           )
           .eq("id", lutId)
           .single();
@@ -156,8 +157,8 @@ export default function LutDetail() {
 
       {/* Slider */}
       <BeforeAfterSlider
-        beforeUri={lut.before_url}
-        afterUri={lut.after_url}
+        beforeUri={getPreviewUrl(lut.preview_before_path)}
+        afterUri={getPreviewUrl(lut.preview_after_path)}
         height={420}
         radius={24}
       />
