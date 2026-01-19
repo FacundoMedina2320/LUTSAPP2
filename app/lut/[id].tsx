@@ -15,6 +15,7 @@ import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
 import BeforeAfterSlider from "../../components/BeforeAfterSlider";
+import { getPreviewUrls } from "../../lib/lutPreviews";
 import { supabase } from "../../lib/supabase";
 
 type LutRow = {
@@ -22,10 +23,12 @@ type LutRow = {
   name: string;
   category: { name: string } | null;
   is_premium: boolean;
-  before_url: string | null;
-  after_url: string | null;
+  preview_before_path: string | null;
+  preview_after_path: string | null;
   cube_path: string | null;
   downloads_count: number | null;
+  beforeUrl?: string | null;
+  afterUrl?: string | null;
 };
 
 export default function LutDetail() {
@@ -51,13 +54,15 @@ export default function LutDetail() {
         const { data, error } = await supabase
           .from("luts")
           .select(
-            "id,name,is_premium,before_url,after_url,cube_path,downloads_count,category:category_id ( name )"
+            "id,name,is_premium,preview_before_path,preview_after_path,cube_path,downloads_count,category:category_id ( name )"
           )
           .eq("id", lutId)
           .single();
 
         if (error) throw error;
-        setLut(data as LutRow);
+        const item = data as LutRow;
+        const preview = getPreviewUrls(item.preview_before_path, item.preview_after_path);
+        setLut({ ...item, ...preview });
       } catch (e: any) {
         Alert.alert("Error", e?.message ?? "Failed to load LUT");
       } finally {
@@ -156,8 +161,8 @@ export default function LutDetail() {
 
       {/* Slider */}
       <BeforeAfterSlider
-        beforeUri={lut.before_url}
-        afterUri={lut.after_url}
+        beforeUri={lut.beforeUrl ?? null}
+        afterUri={lut.afterUrl ?? null}
         height={420}
         radius={24}
       />

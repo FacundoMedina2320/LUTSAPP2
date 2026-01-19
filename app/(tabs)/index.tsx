@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../../lib/supabase";
+import { getPreviewUrls } from "../../lib/lutPreviews";
 import LutCard from "../../components/LutCard";
 
 type LutRow = {
@@ -9,9 +10,11 @@ type LutRow = {
   name: string;
   category: { name: string } | null;
   is_premium: boolean;
-  before_url: string | null;
-  after_url: string | null;
+  preview_before_path: string | null;
+  preview_after_path: string | null;
   downloads_count: number | null;
+  beforeUrl?: string | null;
+  afterUrl?: string | null;
 };
 
 type SuggestionRow = {
@@ -69,7 +72,7 @@ export default function Home() {
         let q = supabase
           .from("luts")
           .select(
-            "id,name,is_premium,before_url,after_url,downloads_count,category:category_id ( name )"
+            "id,name,is_premium,preview_before_path,preview_after_path,downloads_count,category:category_id ( name )"
           )
           .order(orderBy.col, { ascending: orderBy.asc })
           .limit(30);
@@ -80,7 +83,13 @@ export default function Home() {
 
         if (error) throw error;
 
-        if (!cancelled) setLuts((data as LutRow[]) || []);
+        if (!cancelled) {
+          const mapped = ((data as LutRow[]) || []).map((item) => {
+            const preview = getPreviewUrls(item.preview_before_path, item.preview_after_path);
+            return { ...item, ...preview };
+          });
+          setLuts(mapped as LutRow[]);
+        }
       } catch (e: any) {
         console.log("Home load error:", e?.message ?? e);
       } finally {
@@ -222,8 +231,8 @@ export default function Home() {
               id: item.id,
               name: item.name,
               premium: item.is_premium,
-              beforeUri: item.before_url,
-              afterUri: item.after_url,
+              beforeUri: item.beforeUrl ?? null,
+              afterUri: item.afterUrl ?? null,
               category: item.category?.name,
             }}
             onPress={() => onOpenLut(item.id)}
