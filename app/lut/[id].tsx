@@ -85,8 +85,16 @@ export default function LutDetail() {
 
       setBusy(true);
 
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
       const { data, error } = await supabase.functions.invoke("download-lut", {
         body: { lut_id: lut.id },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: anonKey!,
+        },
       });
 
       if (error) {

@@ -44,7 +44,7 @@ const CATEGORIES = [
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
-  const versionLabel = "v1.0";
+  const versionLabel = "v2.0";
 
   const [sort, setSort] = useState<"downloads">("downloads");
   const [category, setCategory] = useState<string>("All");
