@@ -61,7 +61,10 @@ export default function LutDetail() {
 
         if (error) throw error;
         const item = data as LutRow;
-        const preview = getPreviewUrls(item.preview_before_path, item.preview_after_path);
+        const preview = await getPreviewUrls(
+          item.preview_before_path,
+          item.preview_after_path
+        );
         setLut({ ...item, ...preview });
       } catch (e: any) {
         Alert.alert("Error", e?.message ?? "Failed to load LUT");

@@ -84,10 +84,16 @@ export default function Home() {
         if (error) throw error;
 
         if (!cancelled) {
-          const mapped = ((data as LutRow[]) || []).map((item) => {
-            const preview = getPreviewUrls(item.preview_before_path, item.preview_after_path);
-            return { ...item, ...preview };
-          });
+          const rows = (data as LutRow[]) || [];
+          const mapped = await Promise.all(
+            rows.map(async (item) => {
+              const preview = await getPreviewUrls(
+                item.preview_before_path,
+                item.preview_after_path
+              );
+              return { ...item, ...preview };
+            })
+          );
           setLuts(mapped as LutRow[]);
         }
       } catch (e: any) {

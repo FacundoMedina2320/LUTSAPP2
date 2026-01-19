@@ -54,13 +54,18 @@ export default function Library() {
       const rows = ((data as unknown) as LibraryRow[]) || [];
 
       // mapeo limpio: de [{created_at, luts:{...}}] => [{...lut}]
-      const mapped: LutRow[] = rows
-        .map((r) => r.luts)
-        .filter((x): x is LutRow => !!x)
-        .map((item) => {
-          const preview = getPreviewUrls(item.preview_before_path, item.preview_after_path);
-          return { ...item, ...preview };
-        });
+      const mapped: LutRow[] = await Promise.all(
+        rows
+          .map((r) => r.luts)
+          .filter((x): x is LutRow => !!x)
+          .map(async (item) => {
+            const preview = await getPreviewUrls(
+              item.preview_before_path,
+              item.preview_after_path
+            );
+            return { ...item, ...preview };
+          })
+      );
 
       setItems(mapped);
     } catch (e: any) {
