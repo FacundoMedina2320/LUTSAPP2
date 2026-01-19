@@ -5,9 +5,6 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
-        {/* tabs */}
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
         {/* dynamic lut detail */}
         <Stack.Screen name="lut/[id]" options={{ headerShown: false }} />
 
